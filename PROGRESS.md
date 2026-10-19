@@ -24,6 +24,7 @@ Phase 0: Foundations (in progress)
 ## Shaky / confused
 - The nested loop plus the three lines inside it was confusing at first; clear after the line-by-line walkthrough, but worth re-reading before I explain it back
 - Intersecting two sorted lists (for multi-word queries) not covered yet
+- learning git and github saving stuff (didnt undrestand much)
 
 ## Open bugs
 - none
