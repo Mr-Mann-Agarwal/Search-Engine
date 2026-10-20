@@ -5,6 +5,7 @@ async function main() {
     const pages = data.query.pages;
     const page = Object.values(pages)[0];
     console.log(page.extract);
+    
 }
 
 main();
