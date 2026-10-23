@@ -5,7 +5,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT,
-    title TEXT,
+    title TEXT UNIQUE,
     body TEXT,
     fetched_at TEXT
   )
