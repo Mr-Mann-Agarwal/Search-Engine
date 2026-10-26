@@ -5,15 +5,31 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const prepareTitle = db.prepare('SELECT id FROM documents WHERE title = ?');
+function titleExists(title) {
+  const existing = prepareTitle.get(title);
+  if(existing) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+async function response(url) {
+  const response = await fetch(url,{
+    headers:{
+            "User-Agent": "MannSearchEngine/1.0 (https://github.com/Mr-Mann-Agarwal/Search-Engine)"
+
+    }
+  })
+  return response.json();
+}
+
 async function getlinks(title) {
   const url = `https://en.wikipedia.org/w/api.php?action=query&prop=links&titles=${encodeURIComponent(title)}&pllimit=10&plnamespace=0&format=json`;
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "MannSearchEngine/1.0 (https://github.com/Mr-Mann-Agarwal/Search-Engine)"
-    }
-  });
-  const data = await response.json();
+  const data = await response(url);
   const pages = data.query.pages;
   const page = Object.values(pages)[0];
   
@@ -34,15 +50,20 @@ async function main() {
   ];
 
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO documents (url, title, body, fetched_at)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO documents (url, title,body_saved, body, links_saved ,fetched_at)
+    VALUES (?, ?, ? ,? ,? ,?)
   `);
 
   for (const title of titles) {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${title}&format=json`;
+    if(titleExists(title)) {
+      console.log(`Skipping ${title} as it already exists in the database`);
+      continue;
+    }
+    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json`;
 
 
-    await sleep(500);
+
+    await sleep(200);
 
     const response = await fetch(url, {
       headers: {
@@ -50,13 +71,26 @@ async function main() {
       }
     });
     const data = await response.json();
+    if (data.query.pages === undefined) {
+      insert.run(url,title,null,null,0,new Date().toISOString());
+      console.log(`No data found for ${title}`);
+      continue;
+    }
     const pages = data.query.pages;
     const page = Object.values(pages)[0];
+    insert.run(url, page.title, page.extract, new Date().toISOString());
+
 
     for(const linkTitle of await getlinks(title)) {
+
+      if(titleExists(linkTitle)) {
+        console.log(`Skipping ${linkTitle} as it already exists in the database`);
+        continue;
+      }
+
       const linkUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(linkTitle)}&format=json`;
 
-      await sleep(250);
+      await sleep(200);
       const  linkresponse= await fetch(linkUrl,{
         headers: {
           "User-Agent": "MannSearchEngine/1.0 (https://github.com/Mr-Mann-Agarwal/Search-Engine)"
@@ -65,10 +99,17 @@ async function main() {
       });
 
       const linkdata=await linkresponse.json();
+      if (linkdata.query.pages === undefined) {
+        insert.run(linkUrl,linkTitle,null,null,0,new Date().toISOString());
+        console.log(`No data found for ${linkTitle}`);
+        continue;
+      }
       const linkpages=linkdata.query.pages;
       const linkpage=Object.values(linkpages)[0];
 
-      insert.run(linkUrl, linkpage.title, linkpage.extract, new Date().toISOString());
+      //(url, title,body_saved, body, links_saved ,fetched_at)
+
+      insert.run(linkUrl, linkpage.title, 1,linkpage.extract, 1,new Date().toISOString());
 
 
 
@@ -76,7 +117,6 @@ async function main() {
     }
 
 
-    insert.run(url, page.title, page.extract, new Date().toISOString());
 
   }
 

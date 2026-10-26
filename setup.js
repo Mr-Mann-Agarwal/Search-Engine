@@ -6,7 +6,9 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT,
     title TEXT UNIQUE,
+    body_saved INTEGER DEFAULT 0,
     body TEXT,
+    links_saved INTEGER DEFAULT 0,
     fetched_at TEXT
   )
 `);
