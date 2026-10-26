@@ -54,6 +54,9 @@ async function main() {
     VALUES (?, ?, ? ,? ,? ,?)
   `);
 
+  const marksLinkdone =db.prepare('UPDATE documents SET links_saved = 1 WHERE title = ?');
+
+
   for (const title of titles) {
     if(titleExists(title)) {
       console.log(`Skipping ${title} as it already exists in the database`);
@@ -72,13 +75,14 @@ async function main() {
     });
     const data = await response.json();
     if (data.query.pages === undefined) {
-      insert.run(url,title,null,null,0,new Date().toISOString());
+      insert.run(url,title,0,null,0,new Date().toISOString());
       console.log(`No data found for ${title}`);
       continue;
     }
     const pages = data.query.pages;
     const page = Object.values(pages)[0];
-    insert.run(url, page.title, page.extract, new Date().toISOString());
+    //(url, title,body_saved, body, links_saved ,fetched_at)
+    insert.run(url, page.title,1, page.extract,0, new Date().toISOString());
 
 
     for(const linkTitle of await getlinks(title)) {
@@ -109,13 +113,15 @@ async function main() {
 
       //(url, title,body_saved, body, links_saved ,fetched_at)
 
-      insert.run(linkUrl, linkpage.title, 1,linkpage.extract, 1,new Date().toISOString());
+      insert.run(linkUrl, linkpage.title, 1,linkpage.extract, 0,new Date().toISOString());
 
 
 
 
     }
 
+          //(url, title,body_saved, body, links_saved ,fetched_at)
+      marksLinkdone.run(title);
 
 
   }
