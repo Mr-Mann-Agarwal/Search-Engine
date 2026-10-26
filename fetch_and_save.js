@@ -27,7 +27,7 @@ async function response(url) {
 }
 
 async function getlinks(title) {
-  const url = `https://en.wikipedia.org/w/api.php?action=query&prop=links&titles=${encodeURIComponent(title)}&pllimit=10&plnamespace=0&format=json`;
+  const url = `https://en.wikipedia.org/w/api.php?action=query&prop=links&queue=${encodeURIComponent(title)}&pllimit=10&plnamespace=0&format=json`;
 
   const data = await response(url);
   const pages = data.query.pages;
@@ -42,12 +42,17 @@ async function getlinks(title) {
 }
 
 async function main() {
-  const titles = [
+  const queue = [
     "Love", "Cat", "Python (programming language)",
     "Computer", "Internet", "Mathematics",
     "India", "Algorithm", "Database",
     "Operating system", "Electricity", "Music"
   ];
+
+  const visited = new Set(["Love", "Cat", "Python (programming language)",
+    "Computer", "Internet", "Mathematics",
+    "India", "Algorithm", "Database",
+    "Operating system", "Electricity", "Music"]);
 
   const insert = db.prepare(`
     INSERT OR IGNORE INTO documents (url, title,body_saved, body, links_saved ,fetched_at)
@@ -57,12 +62,12 @@ async function main() {
   const marksLinkdone =db.prepare('UPDATE documents SET links_saved = 1 WHERE title = ?');
 
 
-  for (const title of titles) {
+  for (const title of queue) {
     if(titleExists(title)) {
       console.log(`Skipping ${title} as it already exists in the database`);
       continue;
     }
-    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json`;
+    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&queue=${encodeURIComponent(title)}&format=json`;
 
 
 
@@ -85,14 +90,24 @@ async function main() {
     insert.run(url, page.title,1, page.extract,0, new Date().toISOString());
 
 
+
+
+
+
     for(const linkTitle of await getlinks(title)) {
+
+     /*  if(visited.has(linkTitle))
+      {
+        console.log(`Skipping ${linkTitle} as it already exists in the database`);
+        continue;
+      } */
 
       if(titleExists(linkTitle)) {
         console.log(`Skipping ${linkTitle} as it already exists in the database`);
         continue;
       }
 
-      const linkUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(linkTitle)}&format=json`;
+      const linkUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&queue=${encodeURIComponent(linkTitle)}&format=json`;
 
       await sleep(200);
       const  linkresponse= await fetch(linkUrl,{
