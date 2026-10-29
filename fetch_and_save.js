@@ -96,11 +96,11 @@ async function main() {
 
     for(const linkTitle of await getlinks(title)) {
 
-     /*  if(visited.has(linkTitle))
+       if(visited.has(linkTitle))
       {
         console.log(`Skipping ${linkTitle} as it already exists in the database`);
         continue;
-      } */
+      } 
 
       if(titleExists(linkTitle)) {
         console.log(`Skipping ${linkTitle} as it already exists in the database`);
